@@ -30,7 +30,7 @@ Todos los comandos a partir de ahora se deben hacer en la raiz del proyecto. Com
 cd ingsoft3.tp01
 ```
 
-## Configurar varibles de entorno
+## Configurar variables de entorno
 
 El proyecto utiliza PostgresSQL como base de datos. No es necesario instalarlo ya que Docker ya se encarga de descargar la imagen, levantar el contenedor y configurar la base de datos
 
@@ -64,6 +64,11 @@ ctrl + X
 ```
 
 ## Levantar la aplicacion
+
+Ahora para levantar la aplicación tiene dos caminos posibles:
+
+1. Si quiere descargar las imagenes de Docker en su máquina local (lo que puede llevar tiempo) continue con las instrucciones de abajo
+2. Si prefiere utilizar las imagenes subidas previamente a Docker Hub (lo que puede llevar considerablemente menos tiempo) puede continuar donde dice *Levantar el proyecto con las imagenes de registry* y seguir con esas instrucciones 
 
 Una vez que termine con lo anterior ya puede levantar el proyecto
 
