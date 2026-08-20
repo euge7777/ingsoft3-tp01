@@ -58,9 +58,9 @@ Ahora usted mismo lo debe modificar donde dice `you_password` con la contraseña
 
 Para guardar sus cambios debe hacer:
 ```bash
-ctrl + X
-enter
 ctrl + O
+enter
+ctrl + X
 ```
 
 ## Levantar la aplicacion
