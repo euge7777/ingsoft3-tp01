@@ -1,8 +1,8 @@
 # Expense Tracker
 
-La aplicación Expense Tracker funciona para llevar un registro de sus ingresos y gastos
+La aplicación Expense Tracker funciona para llevar un registro de tus ingresos y gastos y los clasifica por categoría
 
-La aplicación esta compuesta por:
+La aplicación está compuesta por:
 
 - Frontend: React + TypeSript + Vite, servido con Nginx
 - Backend: Spring Boot + Java17
@@ -14,36 +14,38 @@ Para ejecutar el proyecto se necesita:
 - Docker
 - Docker compose
 
-Comprobar el Docker con
+Podes probar tu versión de Docker con:
 
 ```bash
 docker --version
 docker compose version
 ```
-Luego clonar el repositorio con
+Luego cloná el repositorio con:
 
 ```bash
 git clone https://github.com/euge7777/ingsoft3-tp01.git
 ```
-Todos los comandos a partir de ahora se deben hacer en la raiz del proyecto. Como todavía no estamos en la raiz del proyecto, para ingresar haga:
+Todos los comandos a partir de ahora se deben hacer en la raíz del proyecto. Como todavía no estamos en la raíz del proyecto, para ingresar haga:
 ```bash
 cd ingsoft3-tp01
 ```
 
 ## Configurar variables de entorno
 
-El proyecto utiliza PostgresSQL como base de datos. No es necesario instalarlo ya que Docker ya se encarga de descargar la imagen, levantar el contenedor y configurar la base de datos
+El proyecto utiliza PostgresSQL como base de datos. No es necesario tenerlo instalado para el proyecto, Docker ya se encarga de descargar la imagen, levantar el contenedor y configurar la base de datos
 
 El archivo `.env` contiene las variables que Docker necesita para configurar la base de datos
 
 El repositorio incluye un `.env.example` que debe copiar y completar con sus propios valores
 
+Para eso primero haga:
+
 ```bash
 cp .env.example .env
 ```
-Ahora usted tiene su propio archivo `.env` en su carpeta que debe completar por cuenta propia. Para ingresar al archivo no va a aparecer en su gestor de archivos asi que para abrirlo debe modificarlo directamente desde la terminal
+Ahora usted tiene su propio archivo `.env` en la carpeta del proyecto en su propia máquina. Este tipo de archivo no va a aparecer si usted entra a la carpeta del repositorio por su gestor de archivos asi que debe modificarlo directamente en la terminal
 
-Al realizar 
+Para modificar el archivo haga: 
 ```bash
 nano .env
 ```
@@ -54,7 +56,7 @@ POSTGRES_DB=expense_tracker
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password
 ```
-Ahora usted mismo lo debe modificar donde dice `you_password` con la contraseña que desee 
+Ahora modifique su contraseña (donde dice `your_password`) y escriba la contraseña que desee 
 
 Para guardar sus cambios debe hacer:
 ```bash
@@ -63,14 +65,16 @@ enter
 ctrl + X
 ```
 
-## Levantar la aplicacion
+## Levantar la aplicación
 
 Ahora para levantar la aplicación tiene dos caminos posibles:
 
-1. Si quiere descargar las imagenes de Docker en su máquina local (lo que puede llevar tiempo) continue con las instrucciones de abajo
-2. Si prefiere utilizar las imagenes subidas previamente a Docker Hub (lo que puede llevar considerablemente menos tiempo) puede continuar donde dice *Levantar el proyecto con las imagenes de registry* y seguir con esas instrucciones 
+1. Si quiere descargar las imágenes de Docker en su máquina local 
+2. Si prefiere utilizar las imágenes subidas previamente a Docker Hub
 
-Una vez que termine con lo anterior ya puede levantar el proyecto
+Si prefiere utilizas las imágenes del Docker Hub (opción 2) dirijase a la sección *Levantar el proyecto con las imágenes del registry*
+
+Si prefier descargar las imágenes en su máquina local continúe con estas instrucciones:
 
 Desde la raiz del proyecto ejecute:
 ```bash
@@ -81,7 +85,7 @@ Docker está levantando y contruyendo tres servicios:
 - Frontend
 - Base de datos 
 
-Una vez que termine puede comprobar que todos los servicios estan funcionando con:
+Una vez que termine puede comprobar que todos los servicios estén funcionando con:
 ```bash
 docker compose ps
 ```
@@ -93,13 +97,13 @@ http://localhost:3000
 ```
 Ya puede registrar su usuario, iniciar sesión y usa Expense Tracker
 
-## Detener la aplicacion
+## Detener la aplicación
 
-Mejor si no dejas la aplicación corriendo asi que cuando ya quiera frenarla lo único que debe hacer es:
+Mejor si no dejas la aplicación corriendo asi que para frenarla lo único que debe hacer es:
 ```bash
 docker compose down
 ```
-Este comando elimina los contenedores, pero todavía conserva el volumne de PostgreSQL por lo que los datos siguen disponibles por si quiere levantar la aplicación de nuevo
+Este comando elimina los contenedores, pero todavía conserva el volumne de PostgreSQL por lo que los datos siguen disponibles por si quiere levantar la aplicación en algún otro momento
 
 Para volver a levantar la aplicación debe hacer:
 ```bash
@@ -113,30 +117,35 @@ Y asi los datos guardados en PostgreSQL también son eliminados
 
 ## Levantar el proyecto con las imagenes de registry
 
-Ademas del `docker-compose.yml` el repositorio cuenta con un `docker-compose.registry.yml`
-Lo que hace este archivo es que levanta el proyecto usando las imagenes publicadas en Docker Hub en lugar de contruirlas localmente en su máquina
+El repositorio ya cuenta con un `docker-compose.registry.yml` que usaremos para levantar la aplicación
 
-Primero puede descagar las imágenes haciendo: 
+Lo que hace este archivo es que levanta el proyecto usando las imágenes publicadas en Docker Hub en lugar de contruirlas localmente en su máquina
+
+Primero descargue las imágenes haciendo: 
 ```bash
 docker compose -f docker-compose.registry.yml pull
 ```
-Luega levanta los servicios con:
+Luega levante los servicios con:
 ```bash
 docker compose -f docker-compose.registry.yml up -d
 ```
-Puede comprobar el estado de las imagenes con:
+Puede comprobar el estado de las imágenes con:
 ```bash
 docker compose -f docker-compose.registry.yml ps
 ```
-La aplicacion vuelve a queda disponible en el mismo 
+## Acceder a la aplicación 
+
+Para ingresar a la aplicación abra en cualquier navegador:  
 ```text
 http://localhost:3000
 ```
-Para detener los servicios debe hacer:
+## Detener la aplicación
+
+Para detener los servicios debe hacer desde terminal:
 ```bash
 docker compose -f docker-compose.registry.yml down
 ```
-Y para deterne los servicios y también borrar el volumen hace:
+Y para detener los servicios y también borrar el volumen de PostgresSQL puede hacer:
 ```bash
 docker compose -f docker-compose.registry.yml down -v
 ```
