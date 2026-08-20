@@ -25,6 +25,11 @@ Luego clonar el repositorio con
 ```bash
 git clone https://github.com/euge7777/ingsoft3-tp01.git
 ```
+Todos los comandos a partir de ahora se deben hacer en la raiz del proyecto. Como todavía no estamos en la raiz del proyecto, para ingresar haga:
+```bash
+cd ingsoft3.tp01
+```
+
 ## Configurar varibles de entorno
 
 El proyecto utiliza PostgresSQL como base de datos. No es necesario instalarlo ya que Docker ya se encarga de descargar la imagen, levantar el contenedor y configurar la base de datos
@@ -33,19 +38,23 @@ El archivo `.env` contiene las variables que Docker necesita para configurar la 
 
 El repositorio incluye un `.env.example` que debe copiar y completar con sus propios valores
 
-Para crear el archivo debe hacer desde la raiz del proyecto:
-
 ```bash
 cp .env.example .env
 ```
-El archivo contiene las siguientes variables:
+Ahora usted tiene su propio archivo `.env` en su carpeta que debe completar por cuenta propia. Para ingresar al archivo no va a aparecer en su gestor de archivos asi que para abrirlo debe modificarlo directamente desde la terminal
+
+Al realizar 
+```bash
+nano .env
+```
+En su pantalla debería aparecer algo como:
 
 ```env
 POSTGRES_DB=expense_tracker
-POSTGRES_USER=your_user 
+POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password
 ```
-Su usuario suele ser `postgres` y la contraseña usted la elige 
+Ahora usted mismo lo debe modificar donde dice `you_password` con la contraseña que desee 
 
 ## Levantar la aplicacion
 
