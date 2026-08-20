@@ -56,6 +56,13 @@ POSTGRES_PASSWORD=your_password
 ```
 Ahora usted mismo lo debe modificar donde dice `you_password` con la contraseña que desee 
 
+Para guardar sus cambios debe hacer:
+```bash
+ctrl + X
+enter
+ctrl + O
+```
+
 ## Levantar la aplicacion
 
 Una vez que termine con lo anterior ya puede levantar el proyecto
