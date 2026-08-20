@@ -1,5 +1,7 @@
 # Expense Tracker
 
+La aplicación Expense Tracker funciona para llevar un registro de sus ingresos y gastos
+
 La aplicación esta compuesta por:
 
 - Frontend: React + TypeSript + Vite, servido con Nginx
@@ -26,7 +28,9 @@ git clone https://github.com/euge7777/ingsoft3-tp01.git
 ## Configurar varibles de entorno
 
 El proyecto utiliza PostgresSQL como base de datos. No es necesario instalarlo ya que Docker ya se encarga de descargar la imagen, levantar el contenedor y configurar la base de datos
+
 El archivo `.env` contiene las variables que Docker necesita para configurar la base de datos
+
 El repositorio incluye un `.env.example` que debe copiar y completar con sus propios valores
 
 Para crear el archivo debe hacer desde la raiz del proyecto:
@@ -75,6 +79,7 @@ Mejor si no dejas la aplicación corriendo asi que cuando ya quiera frenarla lo 
 docker compose down
 ```
 Este comando elimina los contenedores, pero todavía conserva el volumne de PostgreSQL por lo que los datos siguen disponibles por si quiere levantar la aplicación de nuevo
+
 Para volver a levantar la aplicación debe hacer:
 ```bash
 docker compose up -d
