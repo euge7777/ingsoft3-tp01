@@ -27,7 +27,7 @@ git clone https://github.com/euge7777/ingsoft3-tp01.git
 ```
 Todos los comandos a partir de ahora se deben hacer en la raiz del proyecto. Como todavía no estamos en la raiz del proyecto, para ingresar haga:
 ```bash
-cd ingsoft3.tp01
+cd ingsoft3-tp01
 ```
 
 ## Configurar variables de entorno
