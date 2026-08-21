@@ -9,7 +9,6 @@ COPY . .
 
 RUN npm run build
 
-# Etapa de producción: servir con Nginx
 FROM nginx:alpine AS runtime
 
 COPY --from=build /app/dist /usr/share/nginx/html
