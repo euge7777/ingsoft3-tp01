@@ -39,7 +39,8 @@ El repo original no contaba con un healthcheck a la base de datos asi que tambi�
 Al final dejé un docker-compose en la raiz del proyecto en lugar de uno para el front y otro para el back como estaba en el repo original
 
 ### 3. Problemas encontrados
+Aparte de los problemas mencionados antes occurió que el backend al principio permitía solicitudes únicamente a localhost:5173 pero dentro del Docker, el frotend se encuentra en localhost:3000 por lo que las solicitudes de registro e inicio de sesión daban error
 
 ### 4. Uso de IA
-
+Se utilizó ChatGPT para consultar sobre la esctructura de los dockerfile tanto del back como el front para que sea multi-stage como pedía el tp. También para la parte de configurar el proxy de Nginx 
 
