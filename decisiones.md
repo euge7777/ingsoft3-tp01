@@ -44,3 +44,20 @@ Aparte de los problemas mencionados antes occurió que el backend al principio p
 ### 4. Uso de IA
 Se utilizó ChatGPT para consultar sobre la esctructura de los dockerfile tanto del back como el front para que sea multi-stage como pedía el tp. También para la parte de configurar el proxy de Nginx 
 
+# Decisiones del TP3 
+
+### 1. Duración del Sprint
+Elegí una duración de los sprints de una semana ya que se adapta al ritmo de los trabajos prácticos presentados en la materia y para mantener un mejor ciclo de planificación
+
+### 2. Límite de trabajo en progeso
+Elegí un límite de trabajo en progreso de 2 tareas como la guía aconseja (cantidad de personas + 1). Esto me permite trabajar sobre una tarea y tener otra en segundo lugar si la primera queda bloqueada por alguna razón. Un límite demasiado alto ya perdería la finalidad de colocar un límite a las tareas en progreso
+
+### 3. Diagnóstico de la historia mal escrita
+La historia presentada está mal escrita porque decribe más una tarea técnica antes que una funcionalidad que le agregue valor al proyecto. Si la tengo que reescrbir pondría algo como "Como usuario quiero regitrarme en la aplicación para poder guardar mi información y acceder a ella"
+
+### 4. Problemas encontrados
+El único problema que encontré era que los comandos en la guía me daban error cuando los copiaba en mi terminal. Fue ahí cuando usé IA para que me dijera el error, como los comandos estaban con una sintaxis de Bash y yo estaba trabajando desde mi PowerShell me iban a dar error
+
+### 5. Uso de IA
+Para pasar algunos comandos y que no me dieran error al ejecutarlos en mi PowerShell, la mayoría del trabajao práctico lo hice desde la misma web de Github pero para crear las issues con sus etiquetas correspondientes y después crear la épica, la HU, las dos tareas y el bug 
+
