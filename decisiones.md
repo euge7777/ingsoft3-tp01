@@ -61,3 +61,27 @@ El único problema que encontré era que los comandos en la guía me daban error
 ### 5. Uso de IA
 Para pasar algunos comandos y que no me dieran error al ejecutarlos en mi PowerShell, la mayoría del trabajao práctico lo hice desde la misma web de Github pero para crear las issues con sus etiquetas correspondientes y después crear la épica, la HU, las dos tareas y el bug 
 
+# Decisiones del TP4
+
+### 1. Estructura del pipeline
+Decidí seguir con la misma estructura propuesta en la guía de práctica del tp4
+
+Decidií usar dos jobs independientes, uno para el back y otro para el front aprovechando cada uno cuenta con su propio dockerfile. Además se ejecutan en paralelo ya que la construcción de una imagen no depende de la otra. 
+
+### 2. Caché del pipeline
+El pipeline utiliza cache de capas de Docker mediante GitHub Actions. Para evitar que el cache del backend y del frontend se mezclen, se utilizaron scopes diferentes
+
+La primera ejecución construye las capas de las imágenes y las almacena en el cache de GitHub Actions y asi en ejecuciones posteriores se pueden reutilizar las capas que no hayan cambiado
+
+Si el cache desaparece, el pipeline sigue funcionando. La diferencia es que Docker tiene que reconstruir nuevamente las capasO
+
+### 3. Pipeline con Dockerfile
+Se utilizan los dockerfiles del tp2 para que de esta manera axista una única definición del proceso de construcción de cada imagen de la app.
+
+Si el pipeline compilara el backend y el frontend mediante comandos propios, existirían dos formas diferentes de construir la aplicación que podrían dejar de coincidir con el tiempo. Utilizando los dockerfiles, el mismo procedimiento de construcción utilizado durante el desarrollo es el que se verifica automáticamente con ci 
+
+### 4. Problemas encontrados
+En este tp no tuve problemas, pude seguir la guía fácilmente para la resolución del tp cumpliendo con todos los checkpoints 
+
+### 5. Uso de IA
+Si entendí la estructura del workflow presentado en la guía pero utilicé inteligencia artificial para corroborar que los cambios que estaba haciendo a la hora de adaptar la estructura base a mi propio proyecto estuviera correcta 
