@@ -1,5 +1,7 @@
 # Expense Tracker
 
+[![CI](https://github.com/euge7777/ingsoft3-tp01/actions/workflows/ci.yml/badge.svg)](https://github.com/euge7777/ingsoft3-tp01/actions/workflows/ci.yml)
+
 La aplicación Expense Tracker funciona para llevar un registro de tus ingresos y gastos y los clasifica por categoría
 
 La aplicación está compuesta por:
