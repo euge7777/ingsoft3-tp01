@@ -30,7 +30,7 @@ Se puede ver que se hace el down de los contenedores, despues se vuelve a levant
 
 
 ### 3. Comparación de los tamaños de las imágenes
-![imagenes_utilizadas](<img/ingsoft3 - 2.4.png>) 
+![imagenes_utilizadas](<img/ingsoft3 - 2.6.png>) 
 Se ve la captura de pantalla del tamaño de las imagenes finales con las SDK
 
 ### 4. Imagenes en el registry
