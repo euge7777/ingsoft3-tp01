@@ -48,3 +48,13 @@ export const formatDate = (date: Date) => {
     subDays
   }
 }
+export const buildDateRangeLabel = (start: Date, end: Date) => {
+  const startText = formatDate(start).currentStartOfDay
+  const endText = formatDate(end).currentEndOfDay
+
+  if (startText > endText) {
+    return 'rango inválido'
+  }
+
+  return `${startText} - ${endText}`
+}
