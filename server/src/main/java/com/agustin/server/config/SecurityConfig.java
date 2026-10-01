@@ -28,6 +28,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(new WebConfig().corsConfigurationSource()))
                 .authorizeHttpRequests(authRequest -> authRequest
                         .requestMatchers(
+                                "/health",
+                                "/api/v1/health/db",
                                 "/api/v1/auth/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
