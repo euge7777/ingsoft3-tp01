@@ -1,4 +1,4 @@
-FROM node:18-alpine AS build
+FROM node:24-alpine AS base
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -7,6 +7,13 @@ RUN npm ci
 
 COPY . .
 
+FROM base AS test
+RUN npm run test:coverage
+
+FROM scratch AS test-report
+COPY --from=test /app/coverage /coverage
+
+FROM base AS build
 RUN npm run build
 
 FROM nginx:alpine AS runtime

@@ -1,4 +1,4 @@
-FROM maven:3.9.16-eclipse-temurin-17 AS build
+﻿FROM maven:3.9.16-eclipse-temurin-17 AS base
 
 WORKDIR /app
 
@@ -6,7 +6,16 @@ COPY pom.xml .
 RUN mvn -B dependency:go-offline
 
 COPY src ./src
-RUN mvn clean package -DskipTests
+
+FROM base AS test
+RUN mvn -B clean verify
+
+FROM scratch AS test-report
+COPY --from=test /app/target/site/jacoco /jacoco
+COPY --from=test /app/target/surefire-reports /surefire-reports
+
+FROM base AS build
+RUN mvn -B clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine AS runtime
 

@@ -1,4 +1,4 @@
-#TP4 - Pipeline
+﻿# TP5 - Pipeline con tests y coverage
 name: CI
 
 on:
@@ -23,6 +23,33 @@ jobs:
       - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      - name: Ejecutar tests y coverage del backend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./server
+          target: test-report
+          push: false
+          tags: backend-tests:ci
+          outputs: type=local,dest=./backend-test-report
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Publicar resumen backend
+        run: |
+          echo "## Backend tests y coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Los tests del backend se ejecutaron dentro del Dockerfile." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- JaCoCo check ejecutado" >> $GITHUB_STEP_SUMMARY
+          echo "- Reporte HTML generado" >> $GITHUB_STEP_SUMMARY
+          echo "- Reporte disponible como artifact" >> $GITHUB_STEP_SUMMARY
+
+      - name: Subir reporte backend
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jacoco-report
+          path: backend-test-report/
+
       - name: Construir imagen del backend
         uses: docker/build-push-action@v7
         with:
@@ -46,6 +73,34 @@ jobs:
 
       - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v4
+
+      - name: Ejecutar tests y coverage del frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./client
+          target: test-report
+          push: false
+          tags: frontend-tests:ci
+          outputs: type=local,dest=./frontend-test-report
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Publicar resumen frontend
+        run: |
+          echo "## Frontend tests y coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Los tests del frontend se ejecutaron dentro del Dockerfile." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Vitest ejecutado" >> $GITHUB_STEP_SUMMARY
+          echo "- Coverage con V8 ejecutado" >> $GITHUB_STEP_SUMMARY
+          echo "- Umbral de coverage aplicado" >> $GITHUB_STEP_SUMMARY
+          echo "- Reporte disponible como artifact" >> $GITHUB_STEP_SUMMARY
+
+      - name: Subir reporte frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-vitest-coverage
+          path: frontend-test-report/
 
       - name: Construir imagen del frontend
         uses: docker/build-push-action@v7
