@@ -252,3 +252,156 @@ La verificaci´´on se hizo ejecuntando los comandos localmente y en GitHub Acti
 - Pipeline: checks build-backend y build-frontend en GitHub Actions
 
 Los tests fueron revisados para ver si había errores, entender bien el comportamiento de cada uno y qué casos quedaban sin cubrir 
+
+# Decisiones del TP6
+
+### Enlaces de este tp
+
+- Paquete backend GHCR: https://github.com/euge7777/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-backend
+- Paquete frontend GHCR: https://github.com/euge7777/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-frontend
+- PR con "Entrar al registry" salteado: https://github.com/euge7777/ingsoft3-tp01/actions/runs/36901113196/job/110500227246
+- Corrida de main con publicación al final del job: https://github.com/euge7777/ingsoft3-tp01/actions/runs/37403794571/job/112081043601
+- QA Front: https://expense-fornt-qa.onrender.com
+- QA API: https://expense-api-qa.onrender.com
+- PROD Front: https://expense-front-prod.onrender.com
+- PROD API: https://expense-api-prod.onrender.com
+
+### 1. Artefactos
+
+El pipeline publica dos artefactos Docker en GHCR: una imagen para el backend y otra para el frontend. Ambas quedan etiquetadas con el SHA del commit que las produjo.
+
+La publicación se realiza únicamente cuando el cambio llega a main y después de que la verificación del job finalizó correctamente. En los Pull Requests se construye y verifica, pero no se publica.
+
+Esto permite que el registry tenga un significado confiable: una imagen publicada representa un cambio que pasó por la verificación previa. Si se publicaran imágenes aun cuando los tests fallaran, dejaría de ser cierto que lo publicado corresponde a una versión validada.
+
+La cadena se sostiene en tres puntos:
+1. Los cambios pasan por el pipeline antes de llegar a main.
+2. Solo los push a main publican imágenes.
+3. El paso de publicación está al final del job, después de los tests y reportes.
+
+### 2. Continous Delivery
+
+En este TP se implementó Continuous Delivery.
+
+Cada cambio integrado a main llega automáticamente al entorno QA después de que el CI queda en verde. Producción no se despliega de manera automática: requiere una aprobación humana explícita mediante el environment production.
+
+No se implementó Continuous Deployment porque en ese modelo el paso a producción también sería automático, sin intervención humana.
+
+En este proyecto se decidió mantener aprobación manual porque permite revisar el estado de QA antes de promover el cambio a producción y evita que cualquier cambio verificado llegue directamente a usuarios finales.
+
+### 3. Enviroments y secrets
+
+Se crearon dos environments en GitHub:
+- qa
+- production
+
+El job deploy-qa depende del build del backend y del frontend mediante needs, por lo que QA solo se despliega si ambos jobs terminan correctamente.
+
+Además, los deploys están condicionados a github.ref == 'refs/heads/main' por lo que los Pull Requests verifican, pero no despliegan.
+
+Los secrets están separados por environment.
+
+QA utiliza:
+RENDER_HOOK_API_QA
+RENDER_HOOK_FRONT_QA
+
+Producción utiliza:
+RENDER_HOOK_API_PROD
+RENDER_HOOK_FRONT_PROD
+
+Esto limita el alcance de las credenciales: los jobs de QA no necesitan ni pueden utilizar los deploy hooks de producción.
+El environment production tiene además required reviewer, por lo que el job queda pausado hasta recibir aprobación.
+
+### 4. Criterios del gate
+
+Antes de aprobar un deploy a producción se revisa:
+- build-backend haya terminado correctamente
+- build-frontend haya terminado correctamente
+- deploy a QA haya finalizado
+- smoke test de QA esté en verde
+- commit que se está promoviendo sea el esperado
+- que no haya errores relevantes en los logs o en la corrida
+  
+La aprobación no se usa solo como un botón formal, sino como una compuerta antes de producción.
+
+También se realizó un rechazo real con motivo escrito para comprobar que el gate puede bloquear un deploy. En ese caso, el job de producción no continúa y el cambio no llega a PROD.
+
+### 5. Free tier
+
+Se utilizaron los planes gratuitos de Render y Neon.
+
+Una limitación importante de Render Free es que los servicios pueden entrar en estado de suspensión cuando están inactivos. Esto provoca cold starts, por lo que la primera solicitud puede tardar varios segundos o incluso cerca de un minuto. 
+
+Por este motivo los smoke tests no hacen una única llamada, sino que utilizan reintentos con espera entre intentos y --max-time para evitar que un request quede colgado indefinidamente.
+
+También existe un límite de horas de instancia y minutos de build en Render, por lo que no conviene mantener servicios artificialmente despiertos ni generar deploys innecesarios.
+
+El pipeline contempla estas limitaciones mediante reintentos y tiempos de espera.
+
+### 6. Render
+
+Render se utiliza como plataforma de ejecución de los cuatro servicios:
+- backend QA
+- frontend QA
+- backend PROD
+- frontend PROD
+
+Cada servicio tiene Auto-Deploy desactivado. Esto es importante porque el deploy debe ser disparado por GitHub Actions, no directamente por Render.
+
+El pipeline utiliza Deploy Hooks y agrega el commit mediante &ref=$GITHUB_SHA para pedirle a Render que despliegue el mismo commit que fue verificado.
+
+Sin embargo, existe una limitación importante, Render reconstruye la aplicación desde el repositorio. Por lo tanto, aunque se despliega el mismo commit, no se ejecuta exactamente la misma imagen publicada previamente en GHCR.
+
+La garantía que se pierde es la de identidad binaria: el código corresponde al mismo commit, pero la imagen que corre en Render es una reconstrucción nueva.
+
+### 7. Smoke tests
+
+Después de cada deploy se ejecuta un smoke test.
+En QA y PROD se comprueba /health y /api/v1/health/db donde /health verifica que el backend esté vivo, mientras qye /api/v1/health/db ejecuta una consulta contra PostgreSQL y permite comprobar que el backend puede comunicarse con la base. 
+
+La URL raíz del frontend verifica que Nginx y la aplicación web estén disponibles.
+
+El smoke test prueba que los componentes básicos del sistema responden después del despliegue, pero no prueba toda la lógica de negocio.
+
+Tampoco demuestra por sí solo qué versión exacta está corriendo: comprueba disponibilidad, no identidad del artefacto desplegado.
+
+### 8. Deployment pattern
+
+Para una producción real elegiría blue-green deployment, si el costo de infraestructura lo permite.
+
+La estrategia consiste en mantener dos entornos completos: uno activo y otro donde se despliega la nueva versión. Una vez validada, el tráfico se cambia hacia el nuevo entorno.
+
+La ventaja principal es que el rollback puede ser muy rápido: si aparece un problema, se vuelve a dirigir el tráfico hacia el entorno anterior.
+
+Para estrategias como canary sería necesario contar con mejor observabilidad, por ejemplo métricas, logs centralizados, alertas y medición del comportamiento de la nueva versión.
+
+El plan de rollback actual consiste en volver a desplegar una versión anterior conocida como estable desde Render.
+
+Se realizó una prueba real:
+Commit restaurado: af36073
+Estado final: Live
+Duración medida: 2 min 11 s
+
+El rollback revierte el código desplegado, pero no deshace automáticamente modificaciones realizadas en los datos de PostgreSQL.
+
+### 9. Problemas encontrados. Uso de IA
+
+Durante el desarrollo del TP se encontraron varios problemas:
+- Al cambiar de computadora faltaban variables locales de PostgreSQL
+- El frontend QA tenía una URL incorrecta
+- El servicio frontend QA había sido creado con un typo en el nombre
+- El smoke test fallaba porque se estaba utilizando una URL incorrecta
+- Uno de los Deploy Hooks de producción estaba mal configurado
+- Los cold starts de Render provocaron timeouts durante los primeros intentos del smoke test.
+  
+Los problemas se resolvieron revisando logs de Render, probando manualmente los endpoints con curl, verificando las URLs reales de los servicios, corrigiendo los secrets de GitHub y reejecutando los jobs.
+
+Se utilizó IA como asistencia para adaptar la guía del TP al stack del proyecto, configurar los health checks, Nginx y una parte de los smoke tests, también para consultar por los problemas que me fueron surgiendo a lo largo del tp.
+
+Las sugerencias fueron verificadas mediante:
+- Ejecución local con Docker
+- Corridas reales de GitHub Actions
+- Logs de Render
+- Pruebas con curl
+- Comprobación de los servicios QA y PROD
+- Descarga pública de las imágenes desde GHCR
