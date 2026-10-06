@@ -158,7 +158,7 @@ jobs:
         shell: bash
         env:
           URL_API: https://expense-api-qa.onrender.com
-          URL_FRONT: https://expense-front-qa.onrender.com
+          URL_FRONT: https://expense-fornt-qa.onrender.com
         run: |
           echo "Esperando a que QA esté disponible..."
 
