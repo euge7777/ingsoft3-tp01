@@ -151,4 +151,4 @@ Y para detener los servicios y también borrar el volumen de PostgresSQL puede h
 ```bash
 docker compose -f docker-compose.registry.yml down -v
 ```
-
+Expense tracker cuenta con CI / CD
