@@ -405,3 +405,400 @@ Las sugerencias fueron verificadas mediante:
 - Pruebas con curl
 - Comprobación de los servicios QA y PROD
 - Descarga pública de las imágenes desde GHCR
+
+# Decisiones del TP7
+
+### 1. Build once, deploy many
+
+En el TP6, el proceso de despliegue dependía de que Render construyera la aplicación a partir del código fuente. Esto generaba una separación entre el artefacto validado por GitHub Actions y el artefacto que finalmente ejecutaba cada entorno.
+
+El problema de este enfoque es que dos construcciones realizadas a partir del mismo código no necesariamente producen el mismo resultado. Pueden existir diferencias en dependencias, configuración, entorno de construcción o versiones de herramientas.
+
+Por ejemplo, en mi app, el frontend y el backend podían superar sus pruebas en GitHub Actions, pero después Render realizaba otra construcción para QA o producción. En consecuencia, no teníamos la garantía de estar ejecutando exactamente el artefacto que había pasado las verificaciones.
+
+En el TP7 se implementa el principio de Build once, deploy many: GitHub Actions construye una única imagen Docker del backend y una del frontend para cada commit de main. Estas imágenes se publican en GitHub Container Registry (GHCR) y posteriormente se utilizan para desplegar QA y PROD.
+
+De esta manera, la imagen Docker pasa a ser la unidad de despliegue. No se vuelve a construir la aplicación en cada entorno, sino que reutilizamos el mismo artefacto, modificando únicamente la configuración necesaria.
+
+### 2. Estrategia de versionado: SHA y release
+
+Utilzo dos mecanismos de identificación que cumplen funciones diferentes.
+
+#### Etiquetas SHA en GHCR
+
+Las imágenes publicadas se etiquetan utilizando el identificador completo del commit de Git:
+
+ghcr.io/euge7777/ingsoft3-tp01-backend:sha-<commit>
+
+ghcr.io/euge7777/ingsoft3-tp01-frontend:sha-<commit>
+
+El SHA permite relacionar directamente una imagen con la versión del código fuente que originó su construcción.
+
+Esta estrategia evita la ambigüedad de etiquetas genéricas y facilita identificar qué versión se desplegó, comparar QA con PROD y recuperar una versión anterior.
+
+La etiqueta identifica la versión del código, mientras que el digest de Docker identifica el contenido concreto de la imagen. Para una comprobación estricta de identidad del artefacto, el digest es la referencia más fuerte.
+
+#### Etiqueta v7.0.0 en Git
+
+La etiqueta anotada v7.0.0 identifica la versión entregada del TP7 en el historial de Git.
+
+A diferencia de sha-<commit>, que utilizamos para localizar imágenes en el registro, v7.0.0 funciona como referencia de publicación y permite encontrar el commit correspondiente a la entrega.
+
+#### Por qué no publicamos latest
+
+No utilizo la etiqueta latest como mecanismo de despliegue porque es mutable: hoy puede identificar una imagen y mañana otra diferente.
+
+Si QA y PROD utilizaran latest, sería difícil asegurar que están ejecutando exactamente la misma versión. Además, un nuevo push podría modificar la imagen a la que apunta esa etiqueta.
+
+Con sha-<commit>, cada ejecución del pipeline utiliza una referencia específica al commit que fue construido y probado.
+
+#### Configuración inicial de Render
+
+Los servicios de Render fueron configurados con la modalidad Existing Image, utilizando imágenes alojadas en GHCR.
+
+La imagen indicada al configurar inicialmente el servicio permitió establecer su origen y realizar el primer despliegue.
+
+Sin embargo, no significa que esa versión inicial sea la que permanece ejecutándose. En el pipeline, los deploy hooks de Render reciben el parámetro imgURL con la etiqueta correspondiente al SHA de cada nuevo commit.
+
+### 3. Cómo pasar de v7.0.0 a la imagen desplegable
+
+La relación entre la release y la imagen se obtiene a partir del commit al que apunta la etiqueta.
+
+Se utiliza:
+
+git rev-list -n 1 v7.0.0
+
+Este comando devuelve el SHA completo del commit etiquetado.
+
+A continuación, ese mismo identificador se utiliza en las referencias de GHCR:
+
+ghcr.io/euge7777/ingsoft3-tp01-backend:sha-<SHA>
+ghcr.io/euge7777/ingsoft3-tp01-frontend:sha-<SHA>
+
+De esta forma podemos pasar de la versión de entrega a las imágenes correspondientes sin depender de latest ni reconstruir el código.
+
+La relación es:
+
+Release v7.0.0 -> commit SHA -> imágenes Docker de ese SHA -> despliegue en Render
+
+### 4. Cómo comprobar que se ejecuta la imagen correcta
+
+Comprobar que una aplicación responde correctamente no es lo mismo que comprobar qué artefacto se encuentra ejecutando.
+
+En el pipeline se utilizan los smoke tests contra los servicios de QA y PROD, verificando que el frontend responde y que el backend dispone de endpoints de salud, incluyendo una comprobación de conectividad con la base de datos.
+
+Estos controles sirven para detectar problemas básicos, como un servicio caído, una API inaccesible o un fallo de conexión con PostgreSQL.
+
+Sin embargo, un smoke test no demuestra por sí solo que el servicio esté ejecutando la imagen correspondiente al commit recién construido.
+
+Por ejemplo, una versión anterior de Expense Tracker podría continuar funcionando y responder correctamente a /health, aunque el nuevo despliegue hubiera fallado.
+
+Para comprobar la versión desplegada, se revisa la ejecución de GitHub Actions y los eventos o detalles de despliegue de Render, contrastando la referencia de imagen utilizada con el SHA esperado.
+
+En una verificación más estricta también se compara el digest de la imagen que está ejecutando el entorno con el digest publicado en GHCR.
+
+Desde la perspectiva de un cliente HTTP externo, una respuesta de salud solamente confirma disponibilidad. Para comprobar desde afuera la versión exacta sería necesario exponer información confiable de versión o digest desde la aplicación y contrastarla con el registro y el despliegue.
+
+Por eso se distinguen dos verificaciones:
+
+- Disponibilidad: comprobar que los endpoints responden correctamente
+- Identidad del artefacto: comprobar que el despliegue corresponde a la imagen publicada para el SHA esperado
+
+Ambas son necesarias y ninguna reemplaza a la otra.
+
+### 5. Pruebas de integración
+
+En el tp implemento tres pruebas en client/e2e/api.spec.ts, utilizando APIRequestContext de Playwright para enviar solicitudes HTTP reales al backend desplegado en QA.
+
+#### Prueba 1: Crear una categoría
+
+La prueba crea una categoría, consulta nuevamente las categorías para comprobar su persistencia y finalmente elimina el registro creado.
+
+Verifica la integración entre la autenticación, el controlador HTTP, la lógica de negocio y PostgreSQL.
+
+#### Prueba 2: Crear y eliminar un gasto
+
+La prueba registra un gasto mediante la API, comprueba que quedó almacenado y posteriormente lo elimina.
+
+Elegí este flujo porque registrar gastos es una funcionalidad central de Expense Tracker. Si se rompe, la aplicación pierde una parte importante de su utilidad.
+
+#### Prueba 3: Modificar una categoría
+
+La tercera prueba modifica una categoría existente creada para la prueba y comprueba que sus nuevos datos se guardaron correctamente.
+
+Elegí esta operación porque complementa las pruebas de creación y eliminación. Permite detectar problemas en las actualizaciones de datos y en su persistencia, que no serían descubiertos únicamente comprobando altas y bajas.
+
+#### Qué no incluye integración
+
+No se incluyen interacciones visuales con botones, formularios, modales o navegación del navegador.
+
+Esos aspectos corresponden a las pruebas E2E.
+
+Tampoco se repiten todas las validaciones internas del backend, porque las reglas de negocio aisladas y los casos de borde deben cubrirse principalmente mediante pruebas unitarias.
+
+De esta forma evitamos duplicar responsabilidades entre los distintos niveles de la pirámide de pruebas.
+
+#### Responsabilidad ante fallos
+
+Si falla alguna de estas pruebas, la primera responsabilidad de diagnóstico corresponde al área de desarrollo del backend y persistencia, ya que la prueba está verificando el comportamiento de la API y su comunicación con PostgreSQL.
+
+Esto no significa que cualquier fallo sea necesariamente un defecto del backend: también podría deberse a problemas del entorno QA, autenticación, conectividad o datos de prueba.
+
+En el proyecto, el responsable inicial de revisar estos fallos es el equipo que mantiene la API y el pipeline.
+
+### 6. Pruebas E2E
+
+Implementé tres pruebas en client/e2e/expense.spec.ts, utilizando Playwright con Chromium.
+
+A diferencia de las pruebas de integración, estas pruebas reproducen acciones de un usuario real sobre el frontend desplegado en QA.
+
+#### Prueba 1: Crear un ingreso con una categoría nueva
+
+La prueba inicia sesión, abre el formulario de transacciones, crea una categoría desde la interfaz y registra un ingreso asociado a esa categoría.
+
+Después comprueba que el ingreso aparece correctamente y que sus datos fueron persistidos.
+
+Elegí este flujo porque permite recorrer varias partes del sistema: autenticación, formularios, creación de categorías, selección de relaciones y registro de ingresos.
+
+#### Prueba 2: Crear un gasto
+
+La prueba inicia sesión, crea un gasto desde el navegador y verifica que aparece en el dashboard con el importe esperado.
+
+ELegí este caso porque el registro de gastos es la funcionalidad principal de Expense Tracker. Una falla en este recorrido afecta directamente al usuario.
+
+#### Prueba 3: Eliminar un gasto
+
+La prueba crea un gasto, identifica su fila por el título generado para ese test y utiliza el botón Delete de esa misma fila.
+
+Después comprueba que el registro desaparece tanto de la interfaz como de la base de datos.
+
+Elegí este recorrido porque verifica una operación destructiva y permite detectar errores en la asociación entre una fila de la tabla y su botón de eliminación.
+
+En particular, evité seleccionar simplemente el primer botón Delete, porque eso podría eliminar un gasto distinto del creado por la prueba.
+
+#### Qué no incluye E2E
+
+No incorporé todas las validaciones posibles de campos, cálculos internos ni combinaciones de datos.
+
+Tampoco utilicé el navegador para verificar cada operación individual de la API.
+
+Estas pruebas son más costosas porque requieren iniciar Chromium, navegar por la aplicación e interactuar con distintos componentes. Por eso solo se seleccionan tres recorridos representativos.
+
+Siguiendo la pirámide de pruebas, dejo las comprobaciones más pequeñas para los tests unitarios, las interacciones entre componentes para integración y los principales recorridos de usuario para E2E.
+
+#### Responsabilidad ante fallos
+
+Si se rompe un recorrido E2E, el primer responsable de revisar el problema es el equipo que mantiene el frontend y la experiencia de usuario.
+
+También puede ser necesaria la intervención de quienes mantienen el backend o el entorno, ya que las pruebas atraviesan el sistema completo.
+
+Los fallos aparecen en GitHub Actions y quedan acompañados por los reportes HTML y, cuando corresponde, capturas y trazas de Playwright.
+
+### 7. Integración y E2E: por qué no son equivalentes
+
+Las dos suites verifican partes diferentes del funcionamiento de Expense Tracker.
+
+| Integración | E2E |
+| ----------- | --- |
+| Envía solicitudes HTTP directamente a la API | Interactúa con la aplicación desde Chromium |
+| Comprueba autenticación, endpoints y persistencia | Comprueba formularios, botones, navegación y resultados visibles |
+| No depende del texto de un botón | Sí puede detectar que un botón dejó de tener el nombre esperado |
+| Es más acotada y rápida | Recorre más componentes y puede ser más lenta | 
+| Ayuda a diagnosticar fallos de backend y BD | Detecta defectos funcionales visibles para el usuario |
+| Demostración de integración verde y E2E roja | Para verificar el comportamiento del gate de calidad realizamos una modificación intencional en CreateTransactionForm.tsx. |
+
+Cambiamos el texto del botón de 'Create transaction' a 'Save transaction'
+
+La aplicación continuó compilando y los endpoints del backend siguieron funcionando correctamente.
+
+Por eso las tres pruebas de integración terminaron en verde.
+
+Sin embargo, las pruebas E2E intentaban localizar el botón utilizando su nombre accesible original:
+
+page.getByRole('button', {
+  name: 'Create transaction'
+})
+
+Como el texto había cambiado, Playwright no encontraba el elemento esperado y las pruebas que dependían de él fallaban.
+
+El resultado fue:
+
+Build verde -> QA desplegado -> integración en verde -> E2E en rojo -> PROD omitido
+
+Esta demostración permitió comprobar que una aplicación puede tener una API funcional y, al mismo tiempo, presentar un defecto detectable en los recorridos de usuario.
+
+También confirmó que los dos tipos de prueba son complementarios y que el gate funciona correctamente: al fallar E2E, GitHub Actions no habilitó el despliegue de producción.
+
+Posteriormente restauré el texto original, se ejecuta nuevamente el pipeline y asi recupero los resultados verdes.
+
+### 8. Integración amplia frente a integración estrecha
+
+Realizo integración amplia: los tests envían solicitudes a la API de QA ya desplegada y utilizan su base de datos PostgreSQL real.
+
+No levanto una instancia aislada del backend y una base de datos temporal exclusivamente para estas pruebas.
+
+#### Ventajas de la integración amplia
+
+La principal ventaja es que puedo calidar el sistema en condiciones más cercanas al despliegue real.
+
+Las pruebas comprueban que el backend publicado, su configuración de entorno, la autenticación, las rutas HTTP y su conexión con PostgreSQL funcionan conjuntamente.
+
+Además, verifican el servicio que efectivamente fue desplegado en QA, en lugar de verificar solamente una instancia construida dentro del runner de GitHub Actions.
+
+#### Desventajas
+
+Las pruebas dependen de que QA esté disponible y de que su base de datos funcione.
+
+También pueden verse afectadas por latencia de red, cold starts, datos compartidos o cambios concurrentes en el entorno.
+
+Por ese motivo, los resultados pueden ser más lentos y menos aislados que los de integración estrecha.
+
+#### Qué aportaría la integración estrecha
+
+Una alternativa sería levantar el backend junto con una base PostgreSQL exclusiva para las pruebas, por ejemplo mediante Docker Compose o Testcontainers.
+
+Esto mejoraría el aislamiento, permitiría controlar mejor los datos iniciales y reduciría la dependencia de un entorno remoto.
+
+Sin embargo, no comprobaría necesariamente que la versión desplegada en Render tenga una configuración correcta ni que QA sea accesible desde afuera.
+
+Uso integración amplia porque uno de los objetivos centrales del TP7 era verificar el despliegue real antes de permitir el paso a producción.
+
+### 9. Cold start, timeouts, retries y pruebas flaky
+
+El entorno QA está alojado en Render y puede experimentar períodos de inactividad.
+
+En planes gratuitos, un servicio suspendido puede necesitar un tiempo adicional para reactivarse. Esto se conoce como cold start.
+
+El problema es que una prueba automatizada podría interpretar la demora como un fallo funcional cuando, en realidad, el servicio todavía se está iniciando.
+
+Para reducir este riesgo utilizamos varias medidas.
+
+#### Smoke test previo
+
+El job deploy-qa ejecuta comprobaciones de disponibilidad antes de iniciar las pruebas de integración y E2E.
+
+Realiza varios intentos de conexión a los endpoints de salud y al frontend, esperando entre intentos.
+
+De esta manera se reduce la probabilidad de iniciar las suites mientras alguno de los servicios todavía no responde.
+
+#### Timeouts
+
+COnfiguré Playwright con un timeout general de 60 segundos por prueba.
+
+En el recorrido de creación de ingreso, que incluye más interacciones, utilizamos un límite de 90 segundos.
+
+También utilizo timeouts específicos para determinadas operaciones HTTP y esperas de elementos de la interfaz.
+
+#### Retries
+
+La configuración de Playwright contempla un reintento en caso de fallo.
+
+Este mecanismo puede ayudar a distinguir errores transitorios relacionados con condiciones de ejecución, aunque no debe utilizarse para ocultar defectos reales.
+
+Por ejemplo, cuando cambié el texto del botón de creación, repetir la prueba no podía solucionar el problema porque el defecto estaba presente en el frontend.
+
+#### Qué es un test flaky
+
+Una prueba flaky es aquella que, utilizando el mismo código y las mismas condiciones previstas, algunas veces pasa y otras falla sin que exista necesariamente un cambio funcional en la aplicación.
+
+Esto puede producirse por condiciones de carrera, respuestas lentas, problemas de red, dependencia entre pruebas o selectores inestables.
+
+Para reducir estos problemas:
+
+- Utilicé selectores específicos, como select[name="color"], en lugar de seleccionar un elemento genérico ambiguo
+- Generé identificadores únicos para categorías y transacciones
+- Elimino los datos de prueba al finalizar
+- Comrpuebo resultados mediante esperas y aserciones de Playwright, evitando pausas fijas innecesarias
+- Ejecuto las suites con un solo worker para disminuir interferencias entre pruebas sobre el mismo usuario de QA
+
+Los retries son una protección adicional, pero la solución principal es escribir pruebas deterministas y aislar correctamente los datos.
+
+### 10. Una misma imagen de frontend para QA y PROD
+
+El frontend de la aplicación utiliza React y Vite. La aplicación se compila durante la construcción de su imagen Docker y después se sirve mediante Nginx.
+
+Para aplicar Build once, deploy many, la imagen del frontend debe ser reutilizable en QA y PROD sin volver a ejecutar la compilación de Vite.
+
+Esto exige separar el contenido construido de la configuración específica del entorno.
+
+#### Qué contiene la imagen
+
+La imagen contiene los archivos estáticos generados por Vite, el servidor Nginx y la configuración necesaria para servir la aplicación y redirigir las solicitudes correspondientes al backend.
+
+Estos archivos son los mismos al desplegar una determinada imagen en QA o en PROD.
+
+#### Qué depende del entorno
+
+La ubicación del backend al que debe comunicarse el frontend depende del entorno:
+
+QA utiliza https://expense-api-qa.onrender.com.
+
+PROD utiliza https://expense-api-prod.onrender.com.
+
+Esa diferencia debe resolverse mediante configuración de ejecución, sin generar dos bundles de frontend diferentes.
+
+En el proyecto utilizo un archivo de configuración de Nginx basado en una plantilla, que permite separar la configuración utilizada por el servidor del contenido estático del frontend.
+
+Con la configuración de ejecución correspondiente, ambos entornos pueden consumir la misma imagen del frontend, mientras Nginx utiliza el destino de API adecuado.
+
+### 11. Problemas encontrados y soluciones
+
+#### Despliegue de imágenes en Render
+
+Inicialmente fue necesario adaptar el mecanismo de despliegue utilizado en el TP6.
+
+Al pasar a servicios configurados mediante Existing Image, modifiqué GitHub Actions para enviar a Render la URL de la imagen mediante imgURL, en lugar de utilizar el parámetro ref asociado al despliegue desde el repositorio.
+
+Esto permitió indicar explícitamente la imagen del SHA correspondiente a cada ejecución.
+
+#### Error 508 de Nginx
+
+Durante las pruebas en QA encontré un error HTTP 508 relacionado con un bucle de enrutamiento.
+
+Revisando la configuración del proxy Nginx, modifiqué el encabezado Host, reemplazando el valor anterior por $proxy_host para que la solicitud hacia el destino configurado utilizara el host correspondiente.
+
+Esto permitió resolver el problema de enrutamiento.
+
+#### Error 403 de CORS
+
+Posteriormente, la aplicación devolvía 403 Invalid CORS request al intentar registrar un usuario desde QA.
+
+El problema era que la configuración CORS del backend no contemplaba los orígenes públicos de los frontends desplegados en Render.
+
+Agregué los dominios de QA y PROD a los orígenes permitidos en WebConfig.java.
+
+Con esta corrección pude registrar e iniciar sesión con el usuario de pruebas.
+
+#### Problemas de selectores en Playwright
+
+Durante la implementación de las E2E tenía errores porque algunos botones no estaban disponibles directamente en el dashboard.
+
+También encontramos un problema de modo estricto de Playwright al seleccionar el color de una categoría mediante getByRole('combobox'), ya que la página tenía varios selectores.
+
+Lo solucionamos utilizando select[name="color"], que identifica de forma precisa el elemento requerido.
+
+Estas correcciones hicieron que las tres pruebas E2E terminaran correctamente tanto en la computadora local como en GitHub Actions.
+
+#### Demostración del fallo E2E
+
+INtroduje temporalmente un cambio en el nombre del botón de creación de transacciones.
+
+Aunque las pruebas de integración continuaron pasando, las E2E detectaron el cambio y fallaron.
+
+El job de producción quedó omitido automáticamente debido a la dependencia needs: e2e.
+
+Luego revertí el cambio para confirmar que el pipeline volvió a pasar.
+
+### 12. Declaración de uso de inteligencia artificial
+
+Durante el desarrollo del TP7 se utilizó IA como herramienta de asistencia técnica.
+
+Se empleó para comprender los requisitos de la consigna, orientar la configuración de GitHub Actions y Docker, preparar las pruebas de integración y E2E con Playwright, interpretar mensajes de error y proponer correcciones.
+
+También se utilizó como apoyo para organizar y redactar la documentación de las decisiones técnicas.
+
+Las propuestas se contrastaron mediante la ejecución de comandos, pruebas locales, resultados de GitHub Actions y verificaciones sobre la aplicación desplegada.
+
+Los problemas encontrados durante la implementación se analizaron y corrigieron de forma iterativa, utilizando los errores observados como evidencia.
+
+La herramienta de IA funcionó como apoyo al desarrollo y a la documentación, mientras que la verificación del comportamiento del proyecto se realizó mediante las ejecuciones y resultados obtenidos.
