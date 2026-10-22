@@ -17,3 +17,6 @@ Thumbs.db
 target/
 
 coverage/
+
+client/playwright-report/
+client/test-results/
