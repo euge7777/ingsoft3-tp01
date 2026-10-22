@@ -82,7 +82,7 @@ const CreateTransactionForm: React.FC<CreateTransactionFormProps> = ({
       {error.categoryId && <p className='text-red-500 text-xs -mt-3'>Category is required</p>}
       <div className='flex items-center w-full gap-2'>
         <SubmitButton
-          text='Create transaction'
+          text='Save transaction'
           isDisabled={error.title || error.amount || error.type || error.description || error.categoryId}
         />
         <button
