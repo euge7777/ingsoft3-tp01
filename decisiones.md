@@ -802,3 +802,31 @@ Las propuestas se contrastaron mediante la ejecución de comandos, pruebas local
 Los problemas encontrados durante la implementación se analizaron y corrigieron de forma iterativa, utilizando los errores observados como evidencia.
 
 La herramienta de IA funcionó como apoyo al desarrollo y a la documentación, mientras que la verificación del comportamiento del proyecto se realizó mediante las ejecuciones y resultados obtenidos.
+
+# Decisiones del TP8
+
+### 1. Riel elegido y versiones de los providers
+
+Elegí el riel Terraform + Neon + Render, ya que son los proveedores que venía utilizando desde los prácticos anteriores para desplegar Expense Tracker.
+
+Utilicé Terraform v1.15.9 y fijé las siguientes versiones de los providers:
+
+- Neon: kislerdm/neon versión 0.18.0
+- Render: render-oss/render versión 1.9.1
+
+El entorno creado fue preprod, independiente de QA y PROD, con una base de datos PostgreSQL en Neon y dos servicios en Render para el backend y el frontend.
+
+### 2. Problemas que surgieron 
+
+Durante el desarrollo del práctico surgieron los siguientes inconvenientes:
+
+- Creación del proyecto en Neon: el primer terraform apply falló porque Neon requería el identificador de organización (org_id). Lo solucioné incorporando una variable neon_org_id en Terraform y configurando su valor mediante una variable de entorno
+- Error 403 al registrar usuarios: aunque el backend respondía correctamente en /health, el registro desde el frontend de preprod devolvía 403 Forbidden. Identifiqué que la configuración CORS del backend no contemplaba la nueva URL de preprod. Agregué el origen permitido en WebConfig.java, construí una nueva imagen Docker y la publiqué en GHCR
+- Actualización de servicios gratuitos en Render: el provider utilizado presenta limitaciones para actualizar servicios del plan gratuito. Para incorporar la nueva imagen del backend, utilicé terraform apply -replace sobre los servicios de backend y frontend, evitando modificar la base de datos
+
+### 3. Uso de IA
+Utilicé ChatGPT  como herramienta de asistencia durante el desarrollo del TP8.
+
+Lo utilicé para interpretar la consigna, orientar la configuración de Terraform y adaptar los archivos de infraestructura a mi aplicación..
+
+Las soluciones propuestas fueron implementadas y verificadas mediante comandos ejecutados en mi entorno, comprobando su funcionamiento antes de continuar con las siguientes etapas.

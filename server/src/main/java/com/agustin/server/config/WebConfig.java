@@ -18,7 +18,8 @@ public class WebConfig {
             "http://localhost:5173",
             "http://localhost:3000",
             "https://expense-fornt-qa.onrender.com",
-            "https://expense-front-prod.onrender.com"
+            "https://expense-front-prod.onrender.com",
+	    "https://expense-front-preprod.onrender.com"
 ));     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
