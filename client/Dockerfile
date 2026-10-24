@@ -14,6 +14,10 @@ FROM scratch AS test-report
 COPY --from=test /app/coverage /coverage
 
 FROM base AS build
+
+ARG VITE_SENTRY_DSN
+ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+
 RUN npm run build
 
 FROM nginx:alpine AS runtime
