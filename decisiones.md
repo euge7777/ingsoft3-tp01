@@ -830,3 +830,25 @@ Utilicé ChatGPT  como herramienta de asistencia durante el desarrollo del TP8.
 Lo utilicé para interpretar la consigna, orientar la configuración de Terraform y adaptar los archivos de infraestructura a mi aplicación..
 
 Las soluciones propuestas fueron implementadas y verificadas mediante comandos ejecutados en mi entorno, comprobando su funcionamiento antes de continuar con las siguientes etapas.
+
+# Decisiones del TP9
+
+### 1. Depnedabot
+
+Se mergeó el PR #60 generado por Dependabot, que actualizaba Vitest de la versión 5.0.3 a la 5.0.5. Se decidió aceptarlo porque era una actualización de parche y las verificaciones automáticas del pipeline finalizaron correctamente, reduciendo el riesgo de introducir errores.
+
+### 2. Monitoreo y rendimiento
+
+Se configuró UptimeRobot para monitorear el endpoint /health del backend de producción. Se simuló una caída suspendiendo el servicio en Render. El monitor detectó el estado DOWN y registró un incidente de 5 minutos y 5 segundos, tras lo cual se comprobó la recuperación del servicio.
+
+No se midió con precisión el tiempo transcurrido entre la suspensión y la primera alerta; los 5 minutos y 5 segundos corresponden a la duración del incidente registrado.
+
+Según las trazas de Sentry, la operación más utilizada del backend fue GET /api/v1/reports/monthly, con 40 spans, mientras que la más lenta según el percentil 95 fue GET /api/v1/transactions, con 1,50 segundos.
+
+### 3. Probkemas encontrados y uso de IA
+
+Se configuró UptimeRobot para monitorear el endpoint /health del backend de producción. Se simuló una caída suspendiendo el servicio en Render. El monitor detectó el estado DOWN y registró un incidente de 5 minutos y 5 segundos, tras lo cual se comprobó la recuperación del servicio.
+
+No se midió con precisión el tiempo transcurrido entre la suspensión y la primera alerta; los 5 minutos y 5 segundos corresponden a la duración del incidente registrado.
+
+Según las trazas de Sentry, la operación más utilizada del backend fue GET /api/v1/reports/monthly, con 40 spans, mientras que la más lenta según el percentil 95 fue GET /api/v1/transactions, con 1,50 segundos.
