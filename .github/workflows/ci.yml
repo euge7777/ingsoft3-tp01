@@ -56,7 +56,7 @@ jobs:
           echo "- Reporte disponible como artifact" >> $GITHUB_STEP_SUMMARY
 
       - name: Subir reporte backend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-jacoco-report
           path: backend-test-report/
@@ -121,7 +121,7 @@ jobs:
           echo "- Reporte disponible como artifact" >> $GITHUB_STEP_SUMMARY
 
       - name: Subir reporte frontend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-vitest-coverage
           path: frontend-test-report/
@@ -230,7 +230,7 @@ jobs:
 
       - name: Publicar reporte de integracion
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-integracion
           path: |
@@ -280,7 +280,7 @@ jobs:
 
       - name: Publicar reporte E2E
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-e2e
           path: |
